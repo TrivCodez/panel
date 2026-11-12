@@ -483,11 +483,14 @@ async function save(): Promise<void> {
 
     saving.value = true;
     fileError.value = null;
-    const data = new TextEncoder().encode(text.value);
+    const submitted = text.value;
+    const data = new TextEncoder().encode(submitted);
 
     try {
         const result = await job('write', open.path, toBase64(data));
-        file.value = { path: open.path, bytes: data, original: text.value };
+        if (file.value === open) {
+            file.value = { path: open.path, bytes: data, original: submitted };
+        }
         toast.success(
             result.backup
                 ? trans(
