@@ -17,6 +17,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
 import TemplateIcon from '@/components/workspace/TemplateIcon.vue';
@@ -117,6 +119,13 @@ const customSlug = ref('');
 
 const appTemplates = computed(() =>
     props.templates.filter((template) => template.kind === 'app'),
+);
+
+const appTemplateOptions = computed<SelectMenuOption<string>[]>(() =>
+    appTemplates.value.map((template) => ({
+        value: template.slug,
+        label: template.name,
+    })),
 );
 
 const customTemplate = computed(
@@ -928,28 +937,17 @@ const labelClass = 'text-[13px]/5 font-medium text-(--ds-text-muted)';
                                                             : $t('Setup')
                                                     }}
                                                 </label>
-                                                <select
+                                                <SelectMenu
                                                     id="custom-setup"
                                                     v-model="customSlug"
-                                                    class="ds-select h-8 cursor-pointer rounded-md border border-input bg-transparent pl-3 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-                                                >
-                                                    <option value="" disabled>
-                                                        {{
-                                                            ' ' +
-                                                            $t(
-                                                                'Choose a setup',
-                                                            ) +
-                                                            ' '
-                                                        }}
-                                                    </option>
-                                                    <option
-                                                        v-for="template in appTemplates"
-                                                        :key="template.slug"
-                                                        :value="template.slug"
-                                                    >
-                                                        {{ template.name }}
-                                                    </option>
-                                                </select>
+                                                    :options="
+                                                        appTemplateOptions
+                                                    "
+                                                    :placeholder="
+                                                        $t('Choose a setup')
+                                                    "
+                                                    class="h-8 rounded-md border border-input bg-transparent pr-2.5 pl-3 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+                                                />
                                             </div>
 
                                             <div

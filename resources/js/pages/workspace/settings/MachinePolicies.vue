@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
 import TickBox from '@/components/workspace/TickBox.vue';
@@ -139,6 +140,12 @@ const ruleFields = computed(() => [
     'tier',
     ...Object.keys(props.metadata.labels).map((key) => `label:${key}`),
 ]);
+const ruleFieldOptions = computed(() =>
+    ruleFields.value.map((field) => ({
+        value: field,
+        label: fieldLabel(field),
+    })),
+);
 
 function valuesFor(field: string): string[] {
     if (field === 'provider') return props.metadata.providers;
@@ -413,19 +420,12 @@ const labelClass = 'text-[13px]/5 font-medium text-(--ds-text-muted)';
                                 :key="index"
                                 class="flex items-center gap-2"
                             >
-                                <select
+                                <SelectMenu
                                     v-model="rule.field"
-                                    class="ds-select ds-raised-button h-8 w-36 shrink-0 cursor-pointer appearance-none pr-8! text-[13px]"
+                                    :options="ruleFieldOptions"
+                                    class="ds-raised-button h-8 w-36 shrink-0 text-[13px]"
                                     :aria-label="$t('Detail')"
-                                >
-                                    <option
-                                        v-for="field in ruleFields"
-                                        :key="field"
-                                        :value="field"
-                                    >
-                                        {{ fieldLabel(field) }}
-                                    </option>
-                                </select>
+                                />
                                 <span
                                     class="text-[13px] text-(--ds-text-muted)"
                                     >{{ $t('is') }}</span

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SelectMenu } from '@/components/ui/select';
 import { useUpgradeLink } from '@/composables/useUpgradeLink';
 import { trans } from 'laravel-vue-i18n';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
@@ -581,21 +582,18 @@ const focusRing =
             class="flex flex-wrap items-center gap-3 border-b border-(--ds-divider) px-4 py-2.5 text-[13px]/5 sm:px-5"
         >
             <template v-if="runs.length">
-                <select
+                <SelectMenu
                     class="wf-field h-8 max-w-full rounded-md border border-(--ds-border) bg-(--ds-field) px-2 text-[13px]/5"
-                    :value="run?.id ?? ''"
+                    :model-value="run?.id ?? ''"
                     :aria-label="$t('Run')"
-                    @change="
-                        openRun(
-                            Number(($event.target as HTMLSelectElement).value),
-                        )
+                    :options="
+                        runs.map((r) => ({
+                            value: r.id,
+                            label: `#${r.id} · ${stateLook[r.state].label} · ${when(r.startedAt)} · ${r.trigger}`,
+                        }))
                     "
-                >
-                    <option v-for="r in runs" :key="r.id" :value="r.id">
-                        #{{ r.id }} · {{ stateLook[r.state].label }} ·
-                        {{ when(r.startedAt) }} · {{ r.trigger }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => openRun(Number(v))"
+                />
                 <span v-if="run" class="flex items-center gap-2">
                     <span
                         class="size-2 shrink-0 rounded-full"

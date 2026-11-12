@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { useSelfHosted } from '@/composables/useSelfHosted';
+import { trans } from 'laravel-vue-i18n';
 import { computed } from 'vue';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import ToggleSwitch from '@/components/workspace/ToggleSwitch.vue';
 import type {
     IpMasking,
@@ -35,6 +38,16 @@ const updateModes = computed<{ key: UpdateMode; label: string }[]>(() => [
         ? [{ key: 'pinned' as const, label: 'Stay on one' }]
         : []),
 ]);
+
+const releaseOptions = computed<SelectMenuOption<string>[]>(() =>
+    (props.releases ?? []).map((release, index) => ({
+        value: release,
+        label:
+            index === 0
+                ? trans(':version (newest)', { version: release })
+                : release,
+    })),
+);
 
 function setUpdates(mode: UpdateMode): void {
     settings.value = {
@@ -224,31 +237,15 @@ const focusRing =
                     {{ $t(option.label) }}
                 </button>
             </div>
-            <select
+            <SelectMenu
                 v-if="settings.updates === 'pinned' && releases?.length"
-                :value="settings.pinned_version ?? ''"
-                class="ds-select ds-raised-button h-8 w-full cursor-pointer appearance-none pr-8! text-[13px]"
+                :model-value="settings.pinned_version ?? null"
+                :options="releaseOptions"
+                class="ds-raised-button h-8 w-full text-[13px]"
                 :aria-label="$t('Release to stay on')"
                 :disabled="disabled"
-                @change="
-                    set(
-                        'pinned_version',
-                        ($event.target as HTMLSelectElement).value,
-                    )
-                "
-            >
-                <option
-                    v-for="(release, index) in releases"
-                    :key="release"
-                    :value="release"
-                >
-                    {{
-                        index === 0
-                            ? $t(':version (newest)', { version: release })
-                            : release
-                    }}
-                </option>
-            </select>
+                @update:model-value="(v) => set('pinned_version', v)"
+            />
         </div>
     </div>
 </template>

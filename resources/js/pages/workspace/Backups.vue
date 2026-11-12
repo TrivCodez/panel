@@ -38,6 +38,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import InputError from '@/components/InputError.vue';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import BackupDestinationDialog from '@/components/workspace/BackupDestinationDialog.vue';
 import type { BackupDestination } from '@/components/workspace/BackupDestinationDialog.vue';
@@ -205,6 +207,20 @@ function choicesFor(machine: MachineRow): BackupDestination[] {
 
 function selfDestinations(machine: MachineRow): BackupDestination[] {
     return props.destinations.filter((d) => d.machineId === machine.id);
+}
+
+function destinationOptions(
+    machine: MachineRow,
+): SelectMenuOption<number | null>[] {
+    return [
+        { value: null, label: trans('Not backed up') },
+        ...choicesFor(machine).map((d) => ({ value: d.id, label: d.name })),
+        ...selfDestinations(machine).map((d) => ({
+            value: d.id,
+            label: trans(':name (on this machine)', { name: d.name }),
+            disabled: true,
+        })),
+    ];
 }
 
 const dialogOpen = ref(false);
@@ -410,7 +426,7 @@ onBeforeUnmount(() => clearTimeout(timer));
 const focusRing =
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--ds-ring)';
 const selectClass =
-    'ds-select ds-raised-button h-8 w-full min-w-0 cursor-pointer appearance-none pr-8! text-[13px] disabled:cursor-not-allowed disabled:opacity-60';
+    'ds-raised-button h-8 w-full min-w-0 text-[13px] disabled:cursor-not-allowed disabled:opacity-60';
 const machineColumns =
     'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1.5fr)_8.5rem_5.5rem_7.5rem_8.5rem]';
 const destinationColumns =
@@ -660,52 +676,34 @@ const destinationKinds = computed(() => [
                     </span>
 
                     <span class="hidden md:block" role="cell">
-                        <select
+                        <SelectMenu
                             :class="selectClass"
-                            :value="machine.destinationId ?? ''"
+                            :model-value="machine.destinationId"
+                            :options="destinationOptions(machine)"
                             :disabled="!canManage || saving === machine.id"
                             :aria-label="
                                 $t('Where :name\'s backups go', {
                                     name: String(machine.name),
                                 })
                             "
-                            @change="
-                                saveMachine(machine, {
-                                    destinationId:
-                                        Number(
-                                            ($event.target as HTMLSelectElement)
-                                                .value,
-                                        ) || null,
-                                })
+                            @update:model-value="
+                                (value) =>
+                                    saveMachine(machine, {
+                                        destinationId: Number(value) || null,
+                                    })
                             "
-                        >
-                            <option value="">{{ $t('Not backed up') }}</option>
-                            <option
-                                v-for="destination in choicesFor(machine)"
-                                :key="destination.id"
-                                :value="destination.id"
-                            >
-                                {{ destination.name }}
-                            </option>
-                            <option
-                                v-for="destination in selfDestinations(machine)"
-                                :key="destination.id"
-                                :value="destination.id"
-                                disabled
-                            >
-                                {{
-                                    $t(':name (on this machine)', {
-                                        name: destination.name,
-                                    }) + ' '
-                                }}
-                            </option>
-                        </select>
+                        />
                     </span>
 
                     <span class="hidden md:block" role="cell">
-                        <select
+                        <SelectMenu
                             :class="selectClass"
-                            :value="machine.schedule"
+                            :model-value="machine.schedule"
+                            :options="[
+                                { value: 'off', label: $t('Manual only') },
+                                { value: 'daily', label: $t('Daily') },
+                                { value: 'weekly', label: $t('Weekly') },
+                            ]"
                             :disabled="
                                 !canManage ||
                                 !machine.destinationId ||
@@ -716,18 +714,14 @@ const destinationKinds = computed(() => [
                                     name: String(machine.name),
                                 })
                             "
-                            @change="
-                                saveMachine(machine, {
-                                    schedule: (
-                                        $event.target as HTMLSelectElement
-                                    ).value as MachineRow['schedule'],
-                                })
+                            @update:model-value="
+                                (value) =>
+                                    saveMachine(machine, {
+                                        schedule:
+                                            value as MachineRow['schedule'],
+                                    })
                             "
-                        >
-                            <option value="off">{{ $t('Manual only') }}</option>
-                            <option value="daily">{{ $t('Daily') }}</option>
-                            <option value="weekly">{{ $t('Weekly') }}</option>
-                        </select>
+                        />
                     </span>
 
                     <span

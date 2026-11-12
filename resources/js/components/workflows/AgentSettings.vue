@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SelectMenu } from '@/components/ui/select';
 import { computed, onMounted, watch } from 'vue';
 import { EVENTS, FROM_TRIGGER } from './kinds';
 import type { Options, WorkflowNode } from './kinds';
@@ -171,28 +172,27 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
 
     <label class="flex flex-col gap-1.5">
         <span :class="label">{{ $t('Repository') }}</span>
-        <select
-            v-if="deployTrigger"
+        <SelectMenu
             :class="field"
-            :value="fromTrigger ? FROM_TRIGGER : hasRepo ? 'other' : ''"
+            :model-value="fromTrigger ? FROM_TRIGGER : hasRepo ? 'other' : ''"
             :disabled="readOnly"
-            @change="
-                set(
-                    'repo',
-                    ($event.target as HTMLSelectElement).value === FROM_TRIGGER
-                        ? FROM_TRIGGER
-                        : ($event.target as HTMLSelectElement).value === ''
-                          ? ''
-                          : ' ',
-                )
+            v-if="deployTrigger"
+            :options="[
+                { value: '', label: $t('None') },
+                {
+                    value: FROM_TRIGGER,
+                    label: $t('The deployed app’s repository'),
+                },
+                { value: 'other', label: $t('Another repository…') },
+            ]"
+            @update:model-value="
+                (v) =>
+                    set(
+                        'repo',
+                        v === FROM_TRIGGER ? FROM_TRIGGER : v === '' ? '' : ' ',
+                    )
             "
-        >
-            <option value="">{{ $t('None') }}</option>
-            <option :value="FROM_TRIGGER">
-                {{ $t('The deployed app’s repository') }}
-            </option>
-            <option value="other">{{ $t('Another repository…') }}</option>
-        </select>
+        />
         <input
             v-if="!deployTrigger || (hasRepo && !fromTrigger)"
             :class="[field, 'font-ui-mono text-[12px]!']"
@@ -241,20 +241,16 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
             <div class="grid grid-cols-2 gap-2">
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Agent') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('agent') || 'claude'"
+                        :model-value="value('agent') || 'claude'"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'agent',
-                                ($event.target as HTMLSelectElement).value,
-                            )
-                        "
-                    >
-                        <option value="claude">Claude Code</option>
-                        <option value="codex">Codex</option>
-                    </select>
+                        :options="[
+                            { value: 'claude', label: 'Claude Code' },
+                            { value: 'codex', label: 'Codex' },
+                        ]"
+                        @update:model-value="(v) => set('agent', v)"
+                    />
                 </label>
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Model') }}</span>
@@ -370,25 +366,18 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
 
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Time limit') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('minutes') || '20'"
+                    :model-value="value('minutes') || '20'"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'minutes',
-                            Number(($event.target as HTMLSelectElement).value),
-                        )
+                    :options="
+                        [5, 10, 20, 30, 45, 60].map((m) => ({
+                            value: String(m),
+                            label: $t(':count minutes', { count: String(m) }),
+                        }))
                     "
-                >
-                    <option
-                        v-for="m in [5, 10, 20, 30, 45, 60]"
-                        :key="m"
-                        :value="String(m)"
-                    >
-                        {{ $t(':count minutes', { count: String(m) }) }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('minutes', Number(v))"
+                />
             </label>
         </div>
     </details>

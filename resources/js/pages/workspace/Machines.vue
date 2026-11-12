@@ -44,6 +44,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
 import { fieldLabel } from '@/lib/machinePolicies';
 import { onWorkspace } from '@/lib/workspaceRoute';
@@ -332,6 +334,19 @@ const groupInitialSelected = ref<number[]>([]);
 const groupSaving = ref(false);
 const groupErrors = ref<Record<string, string>>({});
 const groupPolicy = ref<number | null>(null);
+const groupPolicyOptions = computed<SelectMenuOption<number | null>[]>(() => [
+    {
+        value: null,
+        label: trans('The default, :name', {
+            name:
+                props.machinePolicies.find((p) => p.isDefault)?.name ??
+                trans('Default'),
+        }),
+    },
+    ...props.machinePolicies
+        .filter((p) => !p.isDefault)
+        .map((option) => ({ value: option.id, label: option.name })),
+]);
 
 const groupItems = computed<GroupDialogItem<number>[]>(() => {
     const names = new Map(
@@ -877,40 +892,12 @@ function formatBytes(bytes: number | undefined): string {
                     >
                         {{ $t('Policy') }}
                     </label>
-                    <select
+                    <SelectMenu
                         id="group-policy"
-                        :value="groupPolicy ?? ''"
-                        class="ds-select ds-raised-button h-9 w-full cursor-pointer appearance-none pr-8! text-[13px]"
-                        @change="
-                            groupPolicy =
-                                ($event.target as HTMLSelectElement).value ===
-                                ''
-                                    ? null
-                                    : Number(
-                                          ($event.target as HTMLSelectElement)
-                                              .value,
-                                      )
-                        "
-                    >
-                        <option value="">
-                            {{
-                                $t('The default, :name', {
-                                    name:
-                                        machinePolicies.find((p) => p.isDefault)
-                                            ?.name ?? $t('Default'),
-                                })
-                            }}
-                        </option>
-                        <option
-                            v-for="option in machinePolicies.filter(
-                                (p) => !p.isDefault,
-                            )"
-                            :key="option.id"
-                            :value="option.id"
-                        >
-                            {{ option.name }}
-                        </option>
-                    </select>
+                        v-model="groupPolicy"
+                        :options="groupPolicyOptions"
+                        class="ds-raised-button h-9 w-full text-[13px]"
+                    />
                     <span class="text-[12.5px]/4.5 text-(--ds-text-muted)">
                         {{
                             $t(

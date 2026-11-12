@@ -62,6 +62,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
 import {
     InputOTP,
     InputOTPGroup,
@@ -600,6 +601,28 @@ watch(
         if (on !== undefined) snapshotBefore.value = on;
     },
 );
+
+const databaseOptions = computed(() => {
+    const database = props.app?.database;
+    if (!database) return [];
+
+    return [
+        {
+            value: 'auto',
+            label:
+                database.setting === 'auto' && database.current
+                    ? trans('From its settings: :display', {
+                          display: String(database.current.display),
+                      })
+                    : trans('From its settings'),
+        },
+        ...database.options.map((option) => ({
+            value: option.value,
+            label: option.label,
+        })),
+        { value: 'none', label: trans('None') },
+    ];
+});
 
 async function saveDatabase(value: string): Promise<void> {
     if (!props.app) return;
@@ -1698,37 +1721,13 @@ const focusRing =
                         class="flex w-full flex-wrap items-center gap-2.5 text-[13px] text-(--ds-text-secondary)"
                     >
                         {{ ' ' + $t('Its database') }}
-                        <select
-                            class="ds-select ds-raised-button h-8 cursor-pointer appearance-none pr-8! text-[13px]"
-                            :value="app.database.setting"
+                        <SelectMenu
+                            class="ds-raised-button h-8 text-[13px]"
+                            :model-value="app.database.setting"
+                            :options="databaseOptions"
                             :disabled="!canManage"
-                            @change="
-                                saveDatabase(
-                                    ($event.target as HTMLSelectElement).value,
-                                )
-                            "
-                        >
-                            <option value="auto">
-                                {{
-                                    app.database.setting === 'auto' &&
-                                    app.database.current
-                                        ? $t('From its settings: :display', {
-                                              display: String(
-                                                  app.database.current.display,
-                                              ),
-                                          })
-                                        : $t('From its settings')
-                                }}
-                            </option>
-                            <option
-                                v-for="option in app.database.options"
-                                :key="option.value"
-                                :value="option.value"
-                            >
-                                {{ option.label }}
-                            </option>
-                            <option value="none">{{ $t('None') }}</option>
-                        </select>
+                            @update:model-value="saveDatabase"
+                        />
                         <span class="text-xs text-(--ds-text-faint)">{{
                             app.database.current
                                 ? $t(
@@ -1962,20 +1961,15 @@ const focusRing =
                     </a>
                     <label class="relative">
                         <span class="sr-only">{{ $t('Lines') }}</span>
-                        <select
-                            v-model.number="logLines"
-                            class="ds-select ds-raised-button h-8 cursor-pointer appearance-none pr-8! text-[13px]"
-                        >
-                            <option :value="100">
-                                {{ $t('Last 100 lines') }}
-                            </option>
-                            <option :value="300">
-                                {{ $t('Last 300 lines') }}
-                            </option>
-                            <option :value="1000">
-                                {{ $t('Last 1000 lines') }}
-                            </option>
-                        </select>
+                        <SelectMenu
+                            v-model="logLines"
+                            :options="[
+                                { value: 100, label: $t('Last 100 lines') },
+                                { value: 300, label: $t('Last 300 lines') },
+                                { value: 1000, label: $t('Last 1000 lines') },
+                            ]"
+                            class="ds-raised-button h-8 text-[13px]"
+                        />
                     </label>
                     <button
                         type="button"

@@ -13,6 +13,7 @@ import InputError from '@/components/InputError.vue';
 import EmbedOptions from '@/components/status/EmbedOptions.vue';
 import ImageUploadField from '@/components/workspace/ImageUploadField.vue';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import SettingsLine from '@/components/workspace/SettingsLine.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
@@ -156,6 +157,15 @@ const available = computed(() => {
 
     return [...groups.entries()];
 });
+const availableOptions = computed(() =>
+    available.value.map(([machine, list]) => ({
+        label: machine,
+        options: list.map((component) => ({
+            value: component.key,
+            label: component.label,
+        })),
+    })),
+);
 
 function addSection(): void {
     form.layout.sections.push({ name: '', components: [] });
@@ -168,10 +178,8 @@ function moveSection(index: number, by: -1 | 1): void {
     [sections[index], sections[target]] = [sections[target], sections[index]];
 }
 
-function addComponent(index: number, event: Event): void {
-    const select = event.target as HTMLSelectElement;
-    if (select.value) form.layout.sections[index].components.push(select.value);
-    select.value = '';
+function addComponent(index: number, key: string): void {
+    if (key) form.layout.sections[index].components.push(key);
 }
 
 function moveMachine(index: number, by: -1 | 1): void {
@@ -752,28 +760,17 @@ const focusRing =
                                         <X class="size-3" />
                                     </button>
                                 </span>
-                                <select
-                                    class="h-7 cursor-pointer rounded-md border border-(--ds-border) bg-(--ds-field) px-2 text-[12.5px]/5 text-(--ds-text-muted)"
+                                <SelectMenu
+                                    :key="section.components.length"
+                                    model-value=""
+                                    :options="availableOptions"
+                                    :placeholder="$t('Add…')"
+                                    class="h-7 rounded-md border border-(--ds-border) bg-(--ds-field) px-2 text-[12.5px]/5 text-(--ds-text-muted)"
                                     :aria-label="$t('Add to this section')"
-                                    @change="addComponent(index, $event)"
-                                >
-                                    <option value="">
-                                        {{ $t('Add…') }}
-                                    </option>
-                                    <optgroup
-                                        v-for="[machine, list] in available"
-                                        :key="machine"
-                                        :label="machine"
-                                    >
-                                        <option
-                                            v-for="component in list"
-                                            :key="component.key"
-                                            :value="component.key"
-                                        >
-                                            {{ component.label }}
-                                        </option>
-                                    </optgroup>
-                                </select>
+                                    @update:model-value="
+                                        (key) => addComponent(index, key)
+                                    "
+                                />
                             </div>
                         </div>
                         <div>

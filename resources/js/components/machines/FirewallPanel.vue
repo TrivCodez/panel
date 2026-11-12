@@ -13,6 +13,7 @@ import type {
     FirewallView,
 } from '@/components/machines/machines';
 import AppButton from '@/components/workspace/AppButton.vue';
+import { SelectMenu } from '@/components/ui/select';
 import {
     Dialog,
     DialogContent,
@@ -416,14 +417,15 @@ const showRules = ref(false);
             <label class="sr-only" for="firewall-proto">{{
                 $t('Protocol')
             }}</label>
-            <select
+            <SelectMenu
                 id="firewall-proto"
                 v-model="customProto"
-                class="ds-select h-7 cursor-pointer rounded-md border border-input bg-transparent px-1.5 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
-            >
-                <option value="tcp">{{ $t('tcp') }}</option>
-                <option value="udp">{{ $t('udp') }}</option>
-            </select>
+                :options="[
+                    { value: 'tcp', label: $t('tcp') },
+                    { value: 'udp', label: $t('udp') },
+                ]"
+                class="h-7 rounded-md border border-input bg-transparent px-1.5 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:bg-input/30"
+            />
             <AppButton
                 size="xs"
                 :disabled="!customValid || busy !== null"

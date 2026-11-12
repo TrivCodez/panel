@@ -47,6 +47,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
 import AppVariablesDialog from '@/components/machines/AppVariablesDialog.vue';
 import DangerButton from '@/components/workspace/DangerButton.vue';
 import TickBox from '@/components/workspace/TickBox.vue';
@@ -549,6 +550,18 @@ const machineCount = computed(() => groups.value.length);
 
 const making = ref(false);
 const envName = ref('');
+const environmentOptions = computed(() =>
+    props.environments.map((e) => ({ value: e.id, label: e.name })),
+);
+const machineOptions = computed(() =>
+    props.machines.map((m) => ({ value: m.id, label: m.name })),
+);
+const previewLimitOptions = computed(() =>
+    Array.from({ length: props.previews.max }, (_, i) => ({
+        value: i + 1,
+        label: String(i + 1),
+    })),
+);
 const envSource = ref<number>(0);
 const envMachines = ref<Record<number, number>>({});
 const envCopyData = ref(true);
@@ -1767,18 +1780,11 @@ function ago(iso: string | null): string {
                             <span class="font-medium">{{
                                 $t('A copy of')
                             }}</span>
-                            <select
-                                v-model.number="envSource"
-                                class="ds-select ds-raised-button h-9 w-full cursor-pointer appearance-none pr-8! text-[13px]"
-                            >
-                                <option
-                                    v-for="e in environments"
-                                    :key="e.id"
-                                    :value="e.id"
-                                >
-                                    {{ e.name }}
-                                </option>
-                            </select>
+                            <SelectMenu
+                                v-model="envSource"
+                                :options="environmentOptions"
+                                class="ds-raised-button h-9 w-full text-[13px]"
+                            />
                         </label>
                     </div>
 
@@ -1805,23 +1811,16 @@ function ago(iso: string | null): string {
                                         })
                                     }}</span
                                 >
-                                <select
-                                    v-model.number="envMachines[m.id]"
+                                <SelectMenu
+                                    v-model="envMachines[m.id]"
+                                    :options="machineOptions"
                                     :aria-label="
                                         $t('What’s on :name goes on', {
                                             name: m.name,
                                         })
                                     "
-                                    class="ds-select ds-raised-button h-8 max-w-[45%] cursor-pointer appearance-none pr-8! text-[13px]"
-                                >
-                                    <option
-                                        v-for="target in machines"
-                                        :key="target.id"
-                                        :value="target.id"
-                                    >
-                                        {{ target.name }}
-                                    </option>
-                                </select>
+                                    class="ds-raised-button h-8 max-w-[45%] text-[13px]"
+                                />
                             </div>
                         </div>
                         <p class="text-xs/4 text-(--ds-text-muted)">
@@ -2258,18 +2257,11 @@ function ago(iso: string | null): string {
                                 <span class="font-medium">{{
                                     $t('Runs on')
                                 }}</span>
-                                <select
-                                    v-model.number="previewForm.machine"
-                                    class="ds-select ds-raised-button h-9 w-full cursor-pointer appearance-none pr-8! text-[13px]"
-                                >
-                                    <option
-                                        v-for="m in machines"
-                                        :key="m.id"
-                                        :value="m.id"
-                                    >
-                                        {{ m.name }}
-                                    </option>
-                                </select>
+                                <SelectMenu
+                                    v-model="previewForm.machine"
+                                    :options="machineOptions"
+                                    class="ds-raised-button h-9 w-full text-[13px]"
+                                />
                             </label>
                         </div>
 
@@ -2306,18 +2298,11 @@ function ago(iso: string | null): string {
                                 <span class="font-medium">{{
                                     $t('Open at once, at most')
                                 }}</span>
-                                <select
-                                    v-model.number="previewForm.limit"
-                                    class="ds-select ds-raised-button h-9 w-full cursor-pointer appearance-none pr-8! text-[13px]"
-                                >
-                                    <option
-                                        v-for="n in previews.max"
-                                        :key="n"
-                                        :value="n"
-                                    >
-                                        {{ n }}
-                                    </option>
-                                </select>
+                                <SelectMenu
+                                    v-model="previewForm.limit"
+                                    :options="previewLimitOptions"
+                                    class="ds-raised-button h-9 w-full text-[13px]"
+                                />
                             </label>
                         </div>
 

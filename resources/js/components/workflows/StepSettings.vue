@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SelectMenu } from '@/components/ui/select';
 import { Check } from '@lucide/vue';
 import { SolarCopy as Copy, SolarRotateCw as RotateCw } from '@/lib/solarIcons';
 import { computed, ref } from 'vue';
@@ -130,18 +131,15 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         <template v-if="node.kind === 'trigger'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Starts when') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('event') || 'manual'"
+                    :model-value="value('event') || 'manual'"
                     :disabled="readOnly"
-                    @change="
-                        set('event', ($event.target as HTMLSelectElement).value)
+                    :options="
+                        EVENTS.map((e) => ({ value: e.id, label: e.label }))
                     "
-                >
-                    <option v-for="e in EVENTS" :key="e.id" :value="e.id">
-                        {{ e.label }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('event', v)"
+                />
                 <span class="text-[12px]/4 text-(--wf-faint)">{{
                     event.description
                 }}</span>
@@ -151,24 +149,18 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                 <div class="grid grid-cols-2 gap-3">
                     <label class="flex flex-col gap-1.5">
                         <span :class="label">{{ $t('Every') }}</span>
-                        <select
+                        <SelectMenu
                             :class="field"
-                            :value="value('every')"
+                            :model-value="value('every')"
                             :disabled="readOnly"
-                            @change="
-                                set(
-                                    'every',
-                                    ($event.target as HTMLSelectElement).value,
-                                )
-                            "
-                        >
-                            <option value="" disabled>
-                                {{ $t('Choose…') }}
-                            </option>
-                            <option value="hour">{{ $t('Hour') }}</option>
-                            <option value="day">{{ $t('Day') }}</option>
-                            <option value="week">{{ $t('Week') }}</option>
-                        </select>
+                            :placeholder="$t('Choose…')"
+                            :options="[
+                                { value: 'hour', label: $t('Hour') },
+                                { value: 'day', label: $t('Day') },
+                                { value: 'week', label: $t('Week') },
+                            ]"
+                            @update:model-value="(v) => set('every', v)"
+                        />
                     </label>
                     <label class="flex flex-col gap-1.5">
                         <span :class="label">{{
@@ -195,21 +187,12 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                     class="flex flex-col gap-1.5"
                 >
                     <span :class="label">{{ $t('On') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('weekday') || '1'"
+                        :model-value="value('weekday') || '1'"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'weekday',
-                                Number(
-                                    ($event.target as HTMLSelectElement).value,
-                                ),
-                            )
-                        "
-                    >
-                        <option
-                            v-for="(day, i) in [
+                        :options="
+                            [
                                 'Monday',
                                 'Tuesday',
                                 'Wednesday',
@@ -217,13 +200,10 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                                 'Friday',
                                 'Saturday',
                                 'Sunday',
-                            ]"
-                            :key="day"
-                            :value="i + 1"
-                        >
-                            {{ day }}
-                        </option>
-                    </select>
+                            ].map((day, i) => ({ value: i + 1, label: day }))
+                        "
+                        @update:model-value="(v) => set('weekday', v)"
+                    />
                 </label>
             </template>
 
@@ -388,129 +368,96 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('On machine') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('machine_id')"
+                    :model-value="value('machine_id')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'machine_id',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="">{{ $t('Any machine') }}</option>
-                    <option
-                        v-for="m in options.machines"
-                        :key="m.id"
-                        :value="String(m.id)"
-                    >
-                        {{ m.name }}
-                    </option>
-                </select>
+                    :options="[
+                        { value: '', label: $t('Any machine') },
+                        ...options.machines.map((m) => ({
+                            value: String(m.id),
+                            label: m.name,
+                        })),
+                    ]"
+                    @update:model-value="(v) => set('machine_id', v)"
+                />
             </label>
             <label
                 v-if="event.filters.includes('service')"
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('Service') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('service')"
+                    :model-value="value('service')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'service',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="">{{ $t('Any service') }}</option>
-                    <option
-                        v-for="s in machine?.services ?? []"
-                        :key="s.key"
-                        :value="s.key"
-                    >
-                        {{ s.name }}
-                    </option>
-                </select>
+                    :options="[
+                        { value: '', label: $t('Any service') },
+                        ...(machine?.services ?? []).map((s) => ({
+                            value: s.key,
+                            label: s.name,
+                        })),
+                    ]"
+                    @update:model-value="(v) => set('service', v)"
+                />
             </label>
             <label
                 v-if="event.filters.includes('deploy')"
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('Service') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('service')"
+                    :model-value="value('service')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'service',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="">{{ $t('Any service') }}</option>
-                    <option
-                        v-for="d in machine?.deploys ?? [
-                            ...new Set(
-                                options.machines.flatMap((m) => m.deploys),
-                            ),
-                        ]"
-                        :key="d"
-                        :value="d"
-                    >
-                        {{ d }}
-                    </option>
-                </select>
+                    :options="[
+                        { value: '', label: $t('Any service') },
+                        ...(
+                            machine?.deploys ?? [
+                                ...new Set(
+                                    options.machines.flatMap((m) => m.deploys),
+                                ),
+                            ]
+                        ).map((d) => ({ value: d, label: d })),
+                    ]"
+                    @update:model-value="(v) => set('service', v)"
+                />
             </label>
             <label
                 v-if="event.filters.includes('outcome')"
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('When it') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('outcome') || 'any'"
+                    :model-value="value('outcome') || 'any'"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'outcome',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="any">{{ $t('Succeeds or fails') }}</option>
-                    <option value="succeeded">{{ $t('Succeeds') }}</option>
-                    <option value="failed">{{ $t('Fails') }}</option>
-                </select>
+                    :options="[
+                        { value: 'any', label: $t('Succeeds or fails') },
+                        { value: 'succeeded', label: $t('Succeeds') },
+                        { value: 'failed', label: $t('Fails') },
+                    ]"
+                    @update:model-value="(v) => set('outcome', v)"
+                />
             </label>
             <label
                 v-if="event.filters.includes('monitor')"
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('Monitor') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('monitor_id')"
+                    :model-value="value('monitor_id')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'monitor_id',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="">{{ $t('Any monitor') }}</option>
-                    <option
-                        v-for="m in options.monitors"
-                        :key="m.id"
-                        :value="String(m.id)"
-                    >
-                        {{ m.name }}
-                    </option>
-                </select>
+                    :options="[
+                        { value: '', label: $t('Any monitor') },
+                        ...options.monitors.map((m) => ({
+                            value: String(m.id),
+                            label: m.name,
+                        })),
+                    ]"
+                    @update:model-value="(v) => set('monitor_id', v)"
+                />
             </label>
         </template>
 
@@ -529,38 +476,40 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         >
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Machine') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('machine_id')"
+                    :model-value="value('machine_id')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'machine_id',
-                            ($event.target as HTMLSelectElement).value,
-                        );
-                        set('service', '');
+                    :placeholder="$t('Choose a machine…')"
+                    :options="[
+                        ...(canUseTriggerMachine
+                            ? [
+                                  {
+                                      value: FROM_TRIGGER,
+                                      label: $t('The one from the trigger'),
+                                  },
+                              ]
+                            : []),
+                        ...(node.kind === 'backup' && options.machines.length
+                            ? [
+                                  {
+                                      value: ALL_MACHINES,
+                                      label: $t('Every machine'),
+                                  },
+                              ]
+                            : []),
+                        ...options.machines.map((m) => ({
+                            value: String(m.id),
+                            label: m.name,
+                        })),
+                    ]"
+                    @update:model-value="
+                        (v) => {
+                            set('machine_id', v);
+                            set('service', '');
+                        }
                     "
-                >
-                    <option value="" disabled>
-                        {{ $t('Choose a machine…') }}
-                    </option>
-                    <option v-if="canUseTriggerMachine" :value="FROM_TRIGGER">
-                        {{ ' ' + $t('The one from the trigger') + ' ' }}
-                    </option>
-                    <option
-                        v-if="node.kind === 'backup' && options.machines.length"
-                        :value="ALL_MACHINES"
-                    >
-                        {{ ' ' + $t('Every machine') + ' ' }}
-                    </option>
-                    <option
-                        v-for="m in options.machines"
-                        :key="m.id"
-                        :value="String(m.id)"
-                    >
-                        {{ m.name }}
-                    </option>
-                </select>
+                />
                 <span
                     v-if="!options.machines.length"
                     class="text-[12px]/4 text-(--wf-faint)"
@@ -584,42 +533,36 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                           ? $t('Agent’s container')
                           : $t('Service')
                 }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('service')"
+                    :model-value="value('service')"
                     :disabled="readOnly || !value('machine_id')"
-                    @change="
-                        set(
-                            'service',
-                            ($event.target as HTMLSelectElement).value,
-                        )
-                    "
-                >
-                    <option value="" disabled>{{ $t('Choose…') }}</option>
-                    <option v-if="canUseTriggerService" :value="FROM_TRIGGER">
-                        {{ ' ' + $t('The one from the trigger') + ' ' }}
-                    </option>
-                    <template v-if="node.kind === 'redeploy'">
-                        <option
-                            v-for="d in machine?.deploys ?? []"
-                            :key="d"
-                            :value="d"
-                        >
-                            {{ d }}
-                        </option>
-                    </template>
-                    <template v-else>
-                        <option
-                            v-for="s in services"
-                            :key="s.key"
-                            :value="s.key"
-                            :disabled="!s.managed"
-                        >
-                            {{ s.name
-                            }}{{ s.managed ? '' : ' ' + $t('(not managed)') }}
-                        </option>
-                    </template>
-                </select>
+                    :placeholder="$t('Choose…')"
+                    :options="[
+                        ...(canUseTriggerService
+                            ? [
+                                  {
+                                      value: FROM_TRIGGER,
+                                      label: $t('The one from the trigger'),
+                                  },
+                              ]
+                            : []),
+                        ...(node.kind === 'redeploy'
+                            ? (machine?.deploys ?? []).map((d) => ({
+                                  value: d,
+                                  label: d,
+                              }))
+                            : services.map((s) => ({
+                                  value: s.key,
+                                  label: s.name,
+                                  hint: s.managed
+                                      ? undefined
+                                      : $t('(not managed)'),
+                                  disabled: !s.managed,
+                              }))),
+                    ]"
+                    @update:model-value="(v) => set('service', v)"
+                />
                 <span
                     v-if="
                         node.kind === 'redeploy' &&
@@ -687,27 +630,19 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         <template v-if="node.kind === 'copy_data' || node.kind === 'promote'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Project') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('project')"
+                    :model-value="value('project')"
                     :disabled="readOnly"
-                    @change="
-                        chooseProject(
-                            ($event.target as HTMLSelectElement).value,
-                        )
+                    :placeholder="$t('Choose a project…')"
+                    :options="
+                        projects.map((p) => ({
+                            value: String(p.id),
+                            label: p.name,
+                        }))
                     "
-                >
-                    <option value="" disabled>
-                        {{ $t('Choose a project…') }}
-                    </option>
-                    <option
-                        v-for="p in projects"
-                        :key="p.id"
-                        :value="String(p.id)"
-                    >
-                        {{ p.name }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => chooseProject(String(v))"
+                />
                 <span
                     v-if="!projects.length"
                     class="text-[12px]/4 text-(--wf-faint)"
@@ -720,26 +655,19 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('Copy data into') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('environment')"
+                    :model-value="value('environment')"
                     :disabled="readOnly || !project"
-                    @change="
-                        set(
-                            'environment',
-                            ($event.target as HTMLSelectElement).value,
-                        )
+                    :placeholder="$t('Choose…')"
+                    :options="
+                        copies.map((e) => ({
+                            value: String(e.id),
+                            label: e.name,
+                        }))
                     "
-                >
-                    <option value="" disabled>{{ $t('Choose…') }}</option>
-                    <option
-                        v-for="e in copies"
-                        :key="e.id"
-                        :value="String(e.id)"
-                    >
-                        {{ e.name }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('environment', v)"
+                />
                 <span
                     v-if="project && !copies.length"
                     class="text-[12px]/4 text-(--ds-amber)"
@@ -767,51 +695,37 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
             <template v-if="node.kind === 'promote'">
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Code from') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('from')"
+                        :model-value="value('from')"
                         :disabled="readOnly || !project"
-                        @change="
-                            set(
-                                'from',
-                                ($event.target as HTMLSelectElement).value,
-                            )
+                        :placeholder="$t('Choose…')"
+                        :options="
+                            (project?.environments ?? []).map((e) => ({
+                                value: String(e.id),
+                                label: e.name,
+                            }))
                         "
-                    >
-                        <option value="" disabled>{{ $t('Choose…') }}</option>
-                        <option
-                            v-for="e in project?.environments ?? []"
-                            :key="e.id"
-                            :value="String(e.id)"
-                        >
-                            {{ e.name }}
-                        </option>
-                    </select>
+                        @update:model-value="(v) => set('from', v)"
+                    />
                 </label>
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Goes to') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('to')"
+                        :model-value="value('to')"
                         :disabled="readOnly || !project"
-                        @change="
-                            set(
-                                'to',
-                                ($event.target as HTMLSelectElement).value,
-                            )
+                        :placeholder="$t('Choose…')"
+                        :options="
+                            (project?.environments ?? [])
+                                .filter((e) => String(e.id) !== value('from'))
+                                .map((e) => ({
+                                    value: String(e.id),
+                                    label: e.name,
+                                }))
                         "
-                    >
-                        <option value="" disabled>{{ $t('Choose…') }}</option>
-                        <option
-                            v-for="e in (project?.environments ?? []).filter(
-                                (e) => String(e.id) !== value('from'),
-                            )"
-                            :key="e.id"
-                            :value="String(e.id)"
-                        >
-                            {{ e.name }}
-                        </option>
-                    </select>
+                        @update:model-value="(v) => set('to', v)"
+                    />
                     <span class="text-[12px]/4 text-(--wf-faint)">
                         {{
                             ' ' +
@@ -857,28 +771,19 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         <template v-if="node.kind === 'check_monitor'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Monitor') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('monitor_id')"
+                    :model-value="value('monitor_id')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'monitor_id',
-                            ($event.target as HTMLSelectElement).value,
-                        )
+                    :placeholder="$t('Choose a monitor…')"
+                    :options="
+                        options.monitors.map((m) => ({
+                            value: String(m.id),
+                            label: m.name,
+                        }))
                     "
-                >
-                    <option value="" disabled>
-                        {{ $t('Choose a monitor…') }}
-                    </option>
-                    <option
-                        v-for="m in options.monitors"
-                        :key="m.id"
-                        :value="String(m.id)"
-                    >
-                        {{ m.name }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('monitor_id', v)"
+                />
                 <span
                     v-if="!options.monitors.length"
                     class="text-[12px]/4 text-(--wf-faint)"
@@ -887,25 +792,18 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
             </label>
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Give up after') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('timeout') || '5'"
+                    :model-value="value('timeout') || '5'"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'timeout',
-                            Number(($event.target as HTMLSelectElement).value),
-                        )
+                    :options="
+                        [1, 2, 5, 10, 15, 30].map((m) => ({
+                            value: m,
+                            label: `${m} ${m === 1 ? $t('minute') : $t('minutes')}`,
+                        }))
                     "
-                >
-                    <option
-                        v-for="m in [1, 2, 5, 10, 15, 30]"
-                        :key="m"
-                        :value="m"
-                    >
-                        {{ m }} {{ m === 1 ? $t('minute') : $t('minutes') }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('timeout', v)"
+                />
             </label>
         </template>
 
@@ -913,21 +811,18 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
             <div class="grid grid-cols-[6rem_minmax(0,1fr)] gap-2">
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Method') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('method') || 'POST'"
+                        :model-value="value('method') || 'POST'"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'method',
-                                ($event.target as HTMLSelectElement).value,
-                            )
+                        :options="
+                            ['GET', 'POST', 'PUT'].map((m) => ({
+                                value: m,
+                                label: $t(m),
+                            }))
                         "
-                    >
-                        <option>{{ $t('GET') }}</option>
-                        <option>{{ $t('POST') }}</option>
-                        <option>{{ $t('PUT') }}</option>
-                    </select>
+                        @update:model-value="(v) => set('method', v)"
+                    />
                 </label>
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('URL') }}</span>
@@ -975,20 +870,20 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         <template v-if="node.kind === 'alert'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Send to') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('to') || 'team'"
+                    :model-value="value('to') || 'team'"
                     :disabled="readOnly"
-                    @change="
-                        set('to', ($event.target as HTMLSelectElement).value)
-                    "
-                >
-                    <option value="team">{{ $t('The team') }}</option>
-                    <option value="emails">{{ $t('Specific people') }}</option>
-                    <option value="both">
-                        {{ $t('The team and specific people') }}
-                    </option>
-                </select>
+                    :options="[
+                        { value: 'team', label: $t('The team') },
+                        { value: 'emails', label: $t('Specific people') },
+                        {
+                            value: 'both',
+                            label: $t('The team and specific people'),
+                        },
+                    ]"
+                    @update:model-value="(v) => set('to', v)"
+                />
             </label>
             <label
                 v-if="(value('to') || 'team') !== 'team'"
@@ -1042,17 +937,16 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
             </label>
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('It’s') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('tone') || 'bad'"
+                    :model-value="value('tone') || 'bad'"
                     :disabled="readOnly"
-                    @change="
-                        set('tone', ($event.target as HTMLSelectElement).value)
-                    "
-                >
-                    <option value="bad">{{ $t('A problem') }}</option>
-                    <option value="good">{{ $t('Good news') }}</option>
-                </select>
+                    :options="[
+                        { value: 'bad', label: $t('A problem') },
+                        { value: 'good', label: $t('Good news') },
+                    ]"
+                    @update:model-value="(v) => set('tone', v)"
+                />
             </label>
             <span class="text-[12px]/4 text-(--wf-faint)">
                 {{
@@ -1068,55 +962,43 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
         <template v-if="node.kind === 'wait'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Wait for') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('minutes') || '2'"
+                    :model-value="value('minutes') || '2'"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'minutes',
-                            Number(($event.target as HTMLSelectElement).value),
+                    :options="
+                        [1, 2, 5, 10, 15, 30, 60, 120, 360, 720, 1440].map(
+                            (m) => ({
+                                value: m,
+                                label:
+                                    m < 60
+                                        ? `${m} ${m === 1 ? $t('minute') : $t('minutes')}`
+                                        : $t(
+                                              m === 60
+                                                  ? ':count hour'
+                                                  : ':count hours',
+                                              { count: String(m / 60) },
+                                          ),
+                            }),
                         )
                     "
-                >
-                    <option
-                        v-for="m in [
-                            1, 2, 5, 10, 15, 30, 60, 120, 360, 720, 1440,
-                        ]"
-                        :key="m"
-                        :value="m"
-                    >
-                        {{
-                            m < 60
-                                ? `${m} ${m === 1 ? $t('minute') : $t('minutes')}`
-                                : $t(
-                                      m === 60 ? ':count hour' : ':count hours',
-                                      { count: String(m / 60) },
-                                  )
-                        }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('minutes', v)"
+                />
             </label>
         </template>
 
         <template v-if="node.kind === 'branch'">
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Check') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('condition')"
+                    :model-value="value('condition')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'condition',
-                            ($event.target as HTMLSelectElement).value,
-                        )
+                    :options="
+                        CONDITIONS.map((c) => ({ value: c.id, label: c.label }))
                     "
-                >
-                    <option v-for="c in CONDITIONS" :key="c.id" :value="c.id">
-                        {{ c.label }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('condition', v)"
+                />
             </label>
             <div
                 v-if="value('condition') === 'trigger_field'"
@@ -1164,26 +1046,19 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
                 class="flex flex-col gap-1.5"
             >
                 <span :class="label">{{ $t('Monitor') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('monitor_id')"
+                    :model-value="value('monitor_id')"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'monitor_id',
-                            ($event.target as HTMLSelectElement).value,
-                        )
+                    :placeholder="$t('Choose…')"
+                    :options="
+                        options.monitors.map((m) => ({
+                            value: String(m.id),
+                            label: m.name,
+                        }))
                     "
-                >
-                    <option value="" disabled>{{ $t('Choose…') }}</option>
-                    <option
-                        v-for="m in options.monitors"
-                        :key="m.id"
-                        :value="String(m.id)"
-                    >
-                        {{ m.name }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('monitor_id', v)"
+                />
             </label>
             <template
                 v-if="
@@ -1194,88 +1069,69 @@ const label = 'text-[12px]/5 font-[550] text-(--wf-muted)';
             >
                 <label class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Machine') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('machine_id')"
+                        :model-value="value('machine_id')"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'machine_id',
-                                ($event.target as HTMLSelectElement).value,
-                            )
-                        "
-                    >
-                        <option value="" disabled>{{ $t('Choose…') }}</option>
-                        <option
-                            v-if="canUseTriggerMachine"
-                            :value="FROM_TRIGGER"
-                        >
-                            {{ ' ' + $t('The one from the trigger') + ' ' }}
-                        </option>
-                        <option
-                            v-for="m in options.machines"
-                            :key="m.id"
-                            :value="String(m.id)"
-                        >
-                            {{ m.name }}
-                        </option>
-                    </select>
+                        :placeholder="$t('Choose…')"
+                        :options="[
+                            ...(canUseTriggerMachine
+                                ? [
+                                      {
+                                          value: FROM_TRIGGER,
+                                          label: $t('The one from the trigger'),
+                                      },
+                                  ]
+                                : []),
+                            ...options.machines.map((m) => ({
+                                value: String(m.id),
+                                label: m.name,
+                            })),
+                        ]"
+                        @update:model-value="(v) => set('machine_id', v)"
+                    />
                 </label>
                 <label
                     v-if="value('condition') === 'service_running'"
                     class="flex flex-col gap-1.5"
                 >
                     <span :class="label">{{ $t('Service') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('service')"
+                        :model-value="value('service')"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'service',
-                                ($event.target as HTMLSelectElement).value,
-                            )
-                        "
-                    >
-                        <option value="" disabled>{{ $t('Choose…') }}</option>
-                        <option
-                            v-if="triggerEvent.service === 'key'"
-                            :value="FROM_TRIGGER"
-                        >
-                            {{ ' ' + $t('The one from the trigger') + ' ' }}
-                        </option>
-                        <option
-                            v-for="s in machine?.services ?? []"
-                            :key="s.key"
-                            :value="s.key"
-                        >
-                            {{ s.name }}
-                        </option>
-                    </select>
+                        :placeholder="$t('Choose…')"
+                        :options="[
+                            ...(triggerEvent.service === 'key'
+                                ? [
+                                      {
+                                          value: FROM_TRIGGER,
+                                          label: $t('The one from the trigger'),
+                                      },
+                                  ]
+                                : []),
+                            ...(machine?.services ?? []).map((s) => ({
+                                value: s.key,
+                                label: s.name,
+                            })),
+                        ]"
+                        @update:model-value="(v) => set('service', v)"
+                    />
                 </label>
                 <label v-else class="flex flex-col gap-1.5">
                     <span :class="label">{{ $t('Below') }}</span>
-                    <select
+                    <SelectMenu
                         :class="field"
-                        :value="value('percent') || '85'"
+                        :model-value="value('percent') || '85'"
                         :disabled="readOnly"
-                        @change="
-                            set(
-                                'percent',
-                                Number(
-                                    ($event.target as HTMLSelectElement).value,
-                                ),
-                            )
+                        :options="
+                            [50, 70, 80, 85, 90, 95].map((p) => ({
+                                value: p,
+                                label: $t(':p% full', { p: String(p) }),
+                            }))
                         "
-                    >
-                        <option
-                            v-for="p in [50, 70, 80, 85, 90, 95]"
-                            :key="p"
-                            :value="p"
-                        >
-                            {{ $t(':p% full', { p: String(p ?? '') }) + ' ' }}
-                        </option>
-                    </select>
+                        @update:model-value="(v) => set('percent', v)"
+                    />
                 </label>
             </template>
             <div
