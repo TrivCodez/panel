@@ -1,20 +1,8 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { stripTypeScriptTypes } from 'node:module';
+import { createFileBrowserSave } from '../../resources/js/components/machines/file-browser-save.js';
 import test from 'node:test';
 
-// Exercise the component's save function without a running panel or daemon.
-const source = readFileSync(
-    new URL(
-        '../../resources/js/components/machines/FileBrowser.vue',
-        import.meta.url,
-    ),
-    'utf8',
-);
-const start = source.indexOf('async function save()');
-const end = source.indexOf('\nfunction saveKey', start);
-assert.ok(start >= 0 && end > start, 'The component save function exists');
-const saveSource = stripTypeScriptTypes(source.slice(start, end));
+// Exercise the same save routine used by the component without a running panel or daemon.
 
 function editor() {
     const text = { value: 'version B' };
@@ -64,14 +52,12 @@ function editor() {
         toast: { success() {} },
         trans: (message) => message,
         baseName: (path) => path.split('/').pop(),
+        bytes: (size) => String(size),
         dir: { value: null },
         list() {},
         handle: (error) => error.message,
     };
-    const save = new Function(
-        ...Object.keys(dependencies),
-        `return (${saveSource});`,
-    )(...Object.values(dependencies));
+    const save = createFileBrowserSave(dependencies);
     return {
         text,
         file,
@@ -87,7 +73,7 @@ function editor() {
     };
 }
 
-test('edits made during a save remain dirty and can be saved again', async () => {
+await test('edits made during a save remain dirty and can be saved again', async () => {
     const e = editor();
     const first = e.save();
     e.text.value = 'version C';
@@ -106,7 +92,7 @@ test('edits made during a save remain dirty and can be saved again', async () =>
     assert.equal(e.changed.value, false);
 });
 
-test('a save with no later edits clears the dirty state', async () => {
+await test('a save with no later edits clears the dirty state', async () => {
     const e = editor();
     const pending = e.save();
     e.complete();
@@ -116,7 +102,7 @@ test('a save with no later edits clears the dirty state', async () => {
     assert.equal(e.saving.value, false);
 });
 
-test('a completed save does not reopen a file that was closed', async () => {
+await test('a completed save does not reopen a file that was closed', async () => {
     const e = editor();
     const pending = e.save();
     e.file.value = null;
@@ -127,7 +113,7 @@ test('a completed save does not reopen a file that was closed', async () => {
     assert.equal(e.text.value, '');
 });
 
-test('a completed save does not overwrite another open file', async () => {
+await test('a completed save does not overwrite another open file', async () => {
     const e = editor();
     const pending = e.save();
     const other = {
@@ -143,7 +129,7 @@ test('a completed save does not overwrite another open file', async () => {
     assert.equal(e.text.value, 'other edit');
 });
 
-test('reopening the same path is a new editor session', async () => {
+await test('reopening the same path is a new editor session', async () => {
     const e = editor();
     const pending = e.save();
     const reopened = { ...e.file.value };
@@ -155,7 +141,7 @@ test('reopening the same path is a new editor session', async () => {
     assert.equal(e.text.value, 'new session edit');
 });
 
-test('a failed save keeps the original baseline and later edits', async () => {
+await test('a failed save keeps the original baseline and later edits', async () => {
     const e = editor();
     const pending = e.save();
     e.text.value = 'version C';
