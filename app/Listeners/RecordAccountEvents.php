@@ -6,6 +6,7 @@ use App\Models\AccountEvent;
 use App\Models\User;
 use App\Support\Admin\Impersonation;
 use App\Support\Auth\GoogleTeamAccess;
+use App\Support\Auth\PasskeySignIn;
 use App\Support\Extensions\Extensions;
 use App\Support\LastSignIn;
 use Illuminate\Auth\Events\CurrentDeviceLogout;
@@ -23,6 +24,7 @@ use Laravel\Fortify\Events\TwoFactorAuthenticationDisabled;
 use Laravel\Fortify\Events\TwoFactorAuthenticationFailed;
 use Laravel\Passkeys\Events\PasskeyDeleted;
 use Laravel\Passkeys\Events\PasskeyRegistered;
+use Laravel\Passkeys\Events\PasskeyVerified;
 
 class RecordAccountEvents
 {
@@ -89,6 +91,7 @@ class RecordAccountEvents
             RecoveryCodesGenerated::class => 'recoveryCodes',
             PasskeyRegistered::class => 'passkeyAdded',
             PasskeyDeleted::class => 'passkeyRemoved',
+            PasskeyVerified::class => 'passkeyVerified',
         ];
     }
 
@@ -97,7 +100,12 @@ class RecordAccountEvents
         $request = request();
         $route = $request->route()?->getName();
         $method = self::signInMethod($route);
-        if (! $event->user instanceof User || $method === null) {
+        if (! $event->user instanceof User) {
+            return;
+        }
+        if ($method === null) {
+            PasskeySignIn::recall($request, $event->user);
+
             return;
         }
 
@@ -116,6 +124,7 @@ class RecordAccountEvents
         LastSignIn::remember($method);
 
         app(GoogleTeamAccess::class)->signedIn($request, $event->user, $firstStep);
+        PasskeySignIn::signedIn($event->user, $firstStep);
 
         $event->user->wasRecentlyCreated
             ? AccountEvent::record($event->user, 'account.created', [], $method)
@@ -188,6 +197,13 @@ class RecordAccountEvents
     public function recoveryCodes(RecoveryCodesGenerated $event): void
     {
         AccountEvent::record($event->user, 'two_factor.recovery_codes');
+    }
+
+    public function passkeyVerified(PasskeyVerified $event): void
+    {
+        if ($event->user instanceof User) {
+            PasskeySignIn::confirmed(request(), $event->user);
+        }
     }
 
     public function passkeyAdded(PasskeyRegistered $event): void

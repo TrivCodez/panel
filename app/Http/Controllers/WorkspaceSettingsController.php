@@ -136,7 +136,7 @@ class WorkspaceSettingsController extends Controller
         $user = $request->user();
         if ($require && ! (clone $workspace)->forceFill(['require_two_factor' => true])->satisfiesTwoFactor($user, $request)) {
             throw ValidationException::withMessages(['require' => $user->passkeys()->exists()
-                ? 'Sign in with your passkey first, or set up two-factor sign-in on your own account.'
+                ? 'Confirm it’s you with your passkey first, or set up two-factor sign-in on your own account.'
                 : 'Set up two-factor sign-in or a passkey on your own account first.']);
         }
 

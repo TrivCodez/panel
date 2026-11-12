@@ -176,7 +176,8 @@ test('a passkey only counts for required two-factor when this session signed in 
     $machines = 'https://'.$workspace->host().'/machines';
 
     $this->actingAs($sam)->withSession([GoogleTeamAccess::VIA => 'password'])->get($machines)
-        ->assertRedirect(route('workspace.settings.security', $workspace->slug));
+        ->assertRedirect('https://'.$workspace->host().'/user/confirm-password')
+        ->assertSessionHas('url.intended', $machines);
     $this->actingAs($sam)->withSession([GoogleTeamAccess::VIA => 'passkey'])->get($machines)->assertOk();
 
     expect($workspace->satisfiesTwoFactor($sam))->toBeTrue();

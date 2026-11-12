@@ -9,7 +9,7 @@ use App\Enums\Plan;
 use App\Enums\WorkspacePermission;
 use App\Enums\WorkspaceRole;
 use App\Support\Admin\Impersonation;
-use App\Support\Auth\GoogleTeamAccess;
+use App\Support\Auth\PasskeySignIn;
 use App\Support\Domains\CustomDomains;
 use App\Support\Edition;
 use App\Support\Entitlements\Entitlements;
@@ -184,7 +184,7 @@ class Workspace extends Model
         }
 
         if ($user->passkeys()->exists() && ($request === null || ! $request->hasSession() || Impersonation::active($request)
-            || $request->session()->get(GoogleTeamAccess::VIA) === 'passkey')) {
+            || PasskeySignIn::verified($request, $user))) {
             return true;
         }
 

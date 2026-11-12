@@ -94,7 +94,7 @@ final class WorkspaceAudience extends OAuthAudience
         }
         if (! $workspace->satisfiesTwoFactor($user, request())) {
             return back()->withErrors(['workspace' => $user->passkeys()->exists()
-                ? "{$workspace->name} requires two-factor sign-in. Sign out and back in with your passkey, or set up an authenticator app."
+                ? "{$workspace->name} requires two-factor sign-in. Confirm it’s you with your passkey in ServerOS, or set up an authenticator app."
                 : "{$workspace->name} requires two-factor sign-in; set it up first."]);
         }
         if (! self::signedInAsRequired($workspace, $user)) {
