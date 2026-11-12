@@ -231,6 +231,19 @@ cd /opt/serveros && docker compose up -d
 
 Any other setting in `config/` that reads an environment variable can go in `.env` the same way.
 
+## GitHub
+
+Public repositories deploy without any setup. For private repositories, and to deploy when you push, your install needs a GitHub App of its own. The workspace owner sets it up once in **Settings › General › GitHub › Set up GitHub**, and every workspace on the install can use it:
+
+1. Pick a name and whether the app belongs to your account or an organisation (the one that owns your repositories), then click **Create on GitHub**. GitHub opens with the permissions, webhook and return address filled in. Click **Create GitHub App** and you come back to the panel with the app saved.
+2. Click **Connect GitHub**, install the app on your account or organisation and choose the repositories ServerOS may read. GitHub then asks you to authorize ServerOS, which confirms you manage that account.
+
+If you'd rather make the app yourself, the same page has a step-by-step guide and a form for its App ID, Client ID, client secret, private key and webhook secret. The panel checks them with GitHub before it saves them, and keeps the secrets encrypted in its database.
+
+The app needs Contents and Pull requests set to Read and write, Metadata read-only, the Push and Pull request events, `https://panel.example.com/github/setup` as its callback URL with **Request user authorization (OAuth) during installation** ticked, and `https://panel.example.com/api/github/webhook` as its webhook URL. GitHub has to reach that webhook URL for deploy on push.
+
+To manage the app in `.env` instead, set `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, `GITHUB_APP_PRIVATE_KEY` (the .pem file's contents, base64 encoded) and `GITHUB_APP_WEBHOOK_SECRET`. Those win over the one saved in Settings.
+
 ## What your install sends
 
 Once a day, at a minute picked from its install id, your install sends serveros.com an anonymous ping, so we know how many installs there are and which versions they run. It's a small JSON POST to `https://serveros.com/api/installs/ping`, and this is all of it:

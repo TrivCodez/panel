@@ -15,6 +15,7 @@ use App\Models\Workspace;
 use App\Support\Audit\AuditContext;
 use App\Support\Audit\Audited;
 use App\Support\Audit\NotAudited;
+use App\Support\Edition;
 use App\Support\Extensions\Extensions;
 use App\Support\GitHub\GitHubApp;
 use App\Support\Monitors\AlertKinds;
@@ -46,7 +47,7 @@ class WorkspaceSettingsController extends Controller
                 'webhookSet' => filled($workspace->alert_webhook_url),
                 'muted' => AlertKinds::muted($workspace),
             ],
-            'github' => $canAlerts && GitHubApp::enabled() ? $workspace->githubInstallations()
+            'github' => $canAlerts && (GitHubApp::enabled() || Edition::selfHosted()) ? $workspace->githubInstallations()
                 ->orderBy('account_login')
                 ->get()
                 ->map(fn (GitHubInstallation $installation) => [
@@ -58,6 +59,11 @@ class WorkspaceSettingsController extends Controller
                         : 'https://github.com/settings/installations/'.$installation->installation_id,
                 ])
                 ->all() : null,
+            'githubSetup' => Edition::selfHosted() && $canAlerts ? [
+                'ready' => GitHubApp::enabled(),
+                'canSetUp' => GitHubAppSetupController::canManage($request->user(), $workspace),
+                'fromEnvironment' => GitHubApp::fromEnvironment(),
+            ] : null,
         ]);
     }
 
@@ -130,7 +136,7 @@ class WorkspaceSettingsController extends Controller
         $user = $request->user();
         if ($require && ! (clone $workspace)->forceFill(['require_two_factor' => true])->satisfiesTwoFactor($user, $request)) {
             throw ValidationException::withMessages(['require' => $user->passkeys()->exists()
-                ? 'Sign in with your passkey first, or set up two-factor sign-in on your own account.'
+                ? 'Confirm it’s you with your passkey first, or set up two-factor sign-in on your own account.'
                 : 'Set up two-factor sign-in or a passkey on your own account first.']);
         }
 

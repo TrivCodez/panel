@@ -15,6 +15,7 @@ use App\Http\Controllers\DashboardRedirectController;
 use App\Http\Controllers\DeploySourceController;
 use App\Http\Controllers\DomainCheckController;
 use App\Http\Controllers\FixController;
+use App\Http\Controllers\GitHubAppSetupController;
 use App\Http\Controllers\GitHubConnectionController;
 use App\Http\Controllers\ImpersonationController;
 use App\Http\Controllers\InvitationController;
@@ -287,6 +288,9 @@ Route::domain('{workspace:slug}.'.config('app.domain'))
             ->name('workspace.settings');
         Route::get('settings/general', [WorkspaceSettingsController::class, 'general'])->name('workspace.settings.general');
         Route::get('settings/github/connect', [GitHubConnectionController::class, 'connect'])->middleware('throttle:10,1')->name('workspace.github.connect');
+        Route::get('settings/github/app', [GitHubAppSetupController::class, 'show'])->name('workspace.github.app');
+        Route::put('settings/github/app', [GitHubAppSetupController::class, 'store'])->middleware('throttle:10,1')->name('workspace.github.app.store');
+        Route::delete('settings/github/app', [GitHubAppSetupController::class, 'destroy'])->name('workspace.github.app.destroy');
         Route::delete('settings/github/{installation}', [GitHubConnectionController::class, 'destroy'])->withoutScopedBindings()->name('workspace.github.destroy');
         Route::patch('settings/general', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
         Route::delete('settings/workspace', [WorkspaceSettingsController::class, 'destroy'])->name('workspace.settings.destroy');
@@ -399,6 +403,7 @@ Route::middleware(['auth', 'verified', StaffTwoFactor::class, 'can:viewAdmin'])-
 });
 
 Route::middleware(['auth', 'verified'])->get('github/setup', [GitHubConnectionController::class, 'setup'])->middleware('throttle:20,1')->name('github.setup');
+Route::middleware(['auth', 'verified'])->get('github/app/created', [GitHubAppSetupController::class, 'created'])->middleware('throttle:10,1')->name('github.app.created');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('oauth/authorize', [OAuthAuthorizeController::class, 'show'])->name('mcp.oauth.authorize');

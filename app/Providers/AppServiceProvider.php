@@ -25,6 +25,7 @@ use App\Support\Extensions\NoPrices;
 use App\Support\Extensions\NoTrialCards;
 use App\Support\Extensions\Prices;
 use App\Support\Extensions\TrialCards;
+use App\Support\GitHub\StoredGitHubApp;
 use App\Support\Licensing\CommunityLicense;
 use App\Support\Mail\BrandMail;
 use Carbon\CarbonImmutable;
@@ -64,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
             : new PlanEntitlements);
 
         $this->app->singleton(Extensions::class);
+        $this->app->scoped(StoredGitHubApp::class);
         $this->app->singletonIf(TrialCards::class, NoTrialCards::class);
         $this->app->singletonIf(Billing::class, NoBilling::class);
         $this->app->singletonIf(DocsSource::class, NoDocs::class);

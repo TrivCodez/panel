@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { trans } from 'laravel-vue-i18n';
-import { Form, Head, router, useForm } from '@inertiajs/vue3';
+import { Form, Head, Link, router, useForm } from '@inertiajs/vue3';
 import {
     SolarBell as Bell,
     SolarBuilding2 as Building2,
@@ -49,6 +49,11 @@ type Props = {
               manageUrl: string;
           }[]
         | null;
+    githubSetup: {
+        ready: boolean;
+        canSetUp: boolean;
+        fromEnvironment: boolean;
+    } | null;
 };
 
 const props = defineProps<Props>();
@@ -227,7 +232,30 @@ watch(confirmingDelete, (open) => {
         "
         :icon="GitBranch"
     >
-        <div class="flex flex-col gap-3">
+        <div
+            v-if="githubSetup && !githubSetup.ready"
+            class="flex flex-col items-start gap-3"
+        >
+            <p class="max-w-xl text-[13px]/5 text-(--ds-text-muted)">
+                {{
+                    githubSetup.canSetUp
+                        ? $t(
+                              'This install needs a GitHub App of its own before it can deploy private repositories. Setting one up takes about a minute, and we’ll walk you through it.',
+                          )
+                        : $t(
+                              'This install doesn’t have a GitHub App yet. Ask the workspace owner to set one up in Settings › General. Public repositories deploy without it.',
+                          )
+                }}
+            </p>
+            <Link
+                v-if="githubSetup.canSetUp"
+                href="/settings/github/app"
+                :class="appButtonClasses('secondary', 'sm')"
+            >
+                {{ $t('Set up GitHub') }}
+            </Link>
+        </div>
+        <div v-else class="flex flex-col gap-3">
             <ul v-if="github.length" class="flex flex-col">
                 <li
                     v-for="account in github"
@@ -283,6 +311,14 @@ watch(confirmingDelete, (open) => {
                             : $t('Connect GitHub')
                     }}
                 </a>
+                <Link
+                    v-if="githubSetup?.canSetUp"
+                    href="/settings/github/app"
+                    :class="appButtonClasses('quiet', 'sm')"
+                    class="ml-1"
+                >
+                    {{ $t('GitHub App') }}
+                </Link>
             </div>
         </div>
     </Tile>

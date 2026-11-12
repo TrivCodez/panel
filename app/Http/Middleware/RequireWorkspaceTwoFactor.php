@@ -22,8 +22,9 @@ class RequireWorkspaceTwoFactor
             return $next($request);
         }
 
-        $message = $user->passkeys()->exists()
-            ? "{$workspace->name} requires two-factor sign-in. Sign out and back in with your passkey, or set up an authenticator app."
+        $passkeys = $user->passkeys()->exists();
+        $message = $passkeys
+            ? "{$workspace->name} requires two-factor sign-in. Confirm it’s you with your passkey to carry on, or set up an authenticator app."
             : "{$workspace->name} requires two-factor sign-in. Set up an authenticator app or a passkey to continue.";
 
         if ($request->expectsJson() && ! $request->header('X-Inertia')) {
@@ -31,6 +32,16 @@ class RequireWorkspaceTwoFactor
         }
 
         Inertia::flash('toast', ['type' => 'error', 'message' => $message]);
+
+        // A passkey shown now counts (PasskeySignIn), and confirming brings
+        // them back to the page they asked for.
+        if ($passkeys) {
+            if ($request->isMethod('GET')) {
+                $request->session()->put('url.intended', $request->fullUrl());
+            }
+
+            return Inertia::location(url('/user/confirm-password'));
+        }
 
         return Inertia::location(route('workspace.settings.security', $workspace->slug));
     }

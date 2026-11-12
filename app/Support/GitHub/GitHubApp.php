@@ -2,8 +2,10 @@
 
 namespace App\Support\GitHub;
 
+use App\Models\GitHubAppSetting;
 use App\Models\GitHubInstallation;
 use App\Models\Workspace;
+use App\Support\Edition;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +21,111 @@ final class GitHubApp
     public static function enabled(): bool
     {
         return collect(['id', 'slug', 'client_id', 'client_secret', 'private_key'])
-            ->every(fn (string $key) => filled(config("services.github_app.{$key}")));
+            ->every(fn (string $key) => filled(self::setting($key)));
+    }
+
+    /**
+     * One of the app's settings. GITHUB_APP_* in .env decide when they name an
+     * app; otherwise a self-hosted install uses the app it saved in Settings.
+     */
+    public static function setting(string $key): ?string
+    {
+        if (self::fromEnvironment() || ! Edition::selfHosted()) {
+            $value = config("services.github_app.{$key}");
+
+            return is_scalar($value) ? (string) $value : null;
+        }
+
+        $stored = self::stored();
+
+        return match ($key) {
+            'id' => $stored?->app_id,
+            'slug' => $stored?->slug,
+            'client_id' => $stored?->client_id,
+            'client_secret' => $stored?->client_secret,
+            'private_key' => $stored?->private_key,
+            'webhook_secret' => $stored?->webhook_secret,
+            default => null,
+        };
+    }
+
+    public static function fromEnvironment(): bool
+    {
+        return filled(config('services.github_app.id'));
+    }
+
+    public static function stored(): ?GitHubAppSetting
+    {
+        return app(StoredGitHubApp::class)->get();
+    }
+
+    /**
+     * Checks an app ID and private key belong together by signing in as the
+     * app, and returns what GitHub says the app is.
+     *
+     * @return array{slug: string, name: string|null, owner: string|null, html_url: string|null}|null
+     */
+    public function describe(string $id, string $privateKey): ?array
+    {
+        try {
+            $response = $this->client()->withToken($this->jwt($id, $privateKey))->get(self::API.'/app');
+        } catch (ConnectionException|RuntimeException) {
+            return null;
+        }
+        $slug = $response->json('slug');
+        if (! $response->successful() || ! is_string($slug) || $slug === '' || (string) $response->json('id') !== $id) {
+            return null;
+        }
+
+        return [
+            'slug' => $slug,
+            'name' => is_string($response->json('name')) ? $response->json('name') : null,
+            'owner' => is_string($response->json('owner.login')) ? $response->json('owner.login') : null,
+            'html_url' => is_string($response->json('html_url')) ? $response->json('html_url') : null,
+        ];
+    }
+
+    /**
+     * Turns the code GitHub sends back after creating an app from a manifest
+     * into the app's settings. The code works once, within an hour.
+     *
+     * @return array{id: string, slug: string, name: string|null, owner: string|null, html_url: string|null, client_id: string, client_secret: string, pem: string, webhook_secret: string|null}|null
+     */
+    public function convertManifest(string $code): ?array
+    {
+        if (preg_match('/^[A-Za-z0-9_-]{1,100}$/', $code) !== 1) {
+            return null;
+        }
+
+        try {
+            $response = $this->client()->post(self::API.'/app-manifests/'.rawurlencode($code).'/conversions');
+        } catch (ConnectionException) {
+            return null;
+        }
+        $app = $response->json();
+        if (! $response->successful() || ! is_array($app)) {
+            return null;
+        }
+        foreach (['slug', 'client_id', 'client_secret', 'pem'] as $required) {
+            if (! is_string($app[$required] ?? null) || $app[$required] === '') {
+                return null;
+            }
+        }
+        if (! is_int($app['id'] ?? null)) {
+            return null;
+        }
+
+        return [
+            'id' => (string) $app['id'],
+            'slug' => $app['slug'],
+            'name' => is_string($app['name'] ?? null) ? $app['name'] : null,
+            'owner' => is_string($app['owner']['login'] ?? null) ? $app['owner']['login'] : null,
+            'html_url' => is_string($app['html_url'] ?? null) ? $app['html_url'] : null,
+            'client_id' => $app['client_id'],
+            'client_secret' => $app['client_secret'],
+            'pem' => $app['pem'],
+            'webhook_secret' => is_string($app['webhook_secret'] ?? null) ? $app['webhook_secret'] : null,
+        ];
     }
 
     public function installUrl(string $state): string
@@ -40,7 +146,7 @@ final class GitHubApp
     /** @return array{name: string, email: string}|null */
     public function botIdentity(): ?array
     {
-        $slug = (string) config('services.github_app.slug');
+        $slug = (string) self::setting('slug');
         if ($slug === '') {
             return null;
         }
@@ -139,7 +245,7 @@ final class GitHubApp
 
     public static function signed(string $body, ?string $signature): bool
     {
-        $secret = (string) config('services.github_app.webhook_secret');
+        $secret = (string) self::setting('webhook_secret');
         if ($secret === '' || ! is_string($signature) || ! str_starts_with($signature, 'sha256=')) {
             return false;
         }
@@ -165,8 +271,8 @@ final class GitHubApp
     {
         try {
             $token = Http::timeout(10)->acceptJson()->post('https://github.com/login/oauth/access_token', [
-                'client_id' => config('services.github_app.client_id'),
-                'client_secret' => config('services.github_app.client_secret'),
+                'client_id' => self::setting('client_id'),
+                'client_secret' => self::setting('client_secret'),
                 'code' => $code,
             ])->json('access_token');
             if (! is_string($token) || $token === '') {
@@ -308,9 +414,9 @@ final class GitHubApp
         ]);
     }
 
-    private function jwt(): string
+    private function jwt(?string $id = null, ?string $privateKey = null): string
     {
-        $key = openssl_pkey_get_private(self::privateKey());
+        $key = openssl_pkey_get_private(self::readKey($privateKey ?? (string) self::setting('private_key')));
         if ($key === false) {
             throw new RuntimeException('GITHUB_APP_PRIVATE_KEY isn’t a valid private key.');
         }
@@ -320,7 +426,7 @@ final class GitHubApp
         $payload = $encode((string) json_encode([
             'iat' => now()->subMinute()->getTimestamp(),
             'exp' => now()->addMinutes(9)->getTimestamp(),
-            'iss' => (string) config('services.github_app.id'),
+            'iss' => $id ?? (string) self::setting('id'),
         ]));
         openssl_sign("{$header}.{$payload}", $signature, $key, OPENSSL_ALGO_SHA256);
 
@@ -329,14 +435,15 @@ final class GitHubApp
 
     private static function slug(): string
     {
-        $slug = trim((string) config('services.github_app.slug'), " /\t\n");
+        $slug = trim((string) self::setting('slug'), " /\t\n");
 
         return str_contains($slug, '/') ? (string) str($slug)->afterLast('/') : $slug;
     }
 
-    private static function privateKey(): string
+    /** A PEM key as GitHub gives it, base64 of one, or one with \n for line breaks. */
+    public static function readKey(string $key): string
     {
-        $key = trim((string) config('services.github_app.private_key'));
+        $key = trim($key);
         if (! str_contains($key, '-----BEGIN')) {
             $key = (string) base64_decode($key, true);
         }
