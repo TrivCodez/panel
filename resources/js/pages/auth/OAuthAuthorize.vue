@@ -10,6 +10,8 @@ import {
 } from '@/lib/solarIcons';
 import { computed, ref } from 'vue';
 import InputError from '@/components/InputError.vue';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AiBrandIcon from '@/components/workspace/AiBrandIcon.vue';
 import TickBox from '@/components/workspace/TickBox.vue';
 import type { AiBrand } from '@/lib/aiBrands';
@@ -62,6 +64,12 @@ const page = usePage();
 const audience = computed(() => oauthAudienceFor(page.props));
 
 const workspaceId = ref(props.workspaces?.[0]?.id ?? null);
+const workspaceOptions = computed<SelectMenuOption<number>[]>(() =>
+    (props.workspaces ?? []).map((w) => ({
+        value: w.id,
+        label: `${w.name} (${w.role ?? ''})`,
+    })),
+);
 const workspace = computed(() =>
     props.workspaces?.find((w) => w.id === workspaceId.value),
 );
@@ -209,16 +217,13 @@ function decide(decision: 'approve' | 'deny'): void {
                 class="text-[13px]/5 font-medium text-(--ds-text-muted)"
                 >{{ $t('Workspace') }}</label
             >
-            <select
+            <SelectMenu
                 v-if="!fixedWorkspace && (workspaces?.length ?? 0) > 1"
                 id="oauth-workspace"
                 v-model="workspaceId"
+                :options="workspaceOptions"
                 class="h-9 rounded-md border border-(--ds-border) bg-(--ds-field) px-2.5 text-[13px]/5"
-            >
-                <option v-for="w in workspaces" :key="w.id" :value="w.id">
-                    {{ w.name }} ({{ w.role }})
-                </option>
-            </select>
+            />
             <p
                 v-else
                 id="oauth-workspace"

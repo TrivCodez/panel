@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { SelectMenu } from '@/components/ui/select';
 import { Plus, X } from '@lucide/vue';
 import { computed } from 'vue';
 import { LARAVEL_STEPS } from './kinds';
@@ -78,26 +79,26 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
 <template>
     <label class="flex flex-col gap-1.5">
         <span :class="label">{{ $t('Machine') }}</span>
-        <select
+        <SelectMenu
             :class="field"
-            :value="value('machine_id')"
+            :model-value="value('machine_id')"
             :disabled="readOnly"
-            @change="
-                set('machine_id', ($event.target as HTMLSelectElement).value);
-                set('service', '');
-                set('reload', '');
-                set('restart', '');
+            :placeholder="$t('Choose a machine…')"
+            :options="
+                options.machines.map((m) => ({
+                    value: String(m.id),
+                    label: m.name,
+                }))
             "
-        >
-            <option value="" disabled>{{ $t('Choose a machine…') }}</option>
-            <option
-                v-for="m in options.machines"
-                :key="m.id"
-                :value="String(m.id)"
-            >
-                {{ m.name }}
-            </option>
-        </select>
+            @update:model-value="
+                (v) => {
+                    set('machine_id', v);
+                    set('service', '');
+                    set('reload', '');
+                    set('restart', '');
+                }
+            "
+        />
     </label>
 
     <div class="flex flex-col gap-1.5">
@@ -165,22 +166,21 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
 
     <label class="flex flex-col gap-1.5">
         <span :class="label">{{ $t('Runs under') }}</span>
-        <select
+        <SelectMenu
             :class="field"
-            :value="value('service')"
+            :model-value="value('service')"
             :disabled="readOnly || !value('machine_id')"
-            @change="set('service', ($event.target as HTMLSelectElement).value)"
-        >
-            <option value="" disabled>{{ $t('Choose…') }}</option>
-            <option
-                v-for="s in services"
-                :key="s.key"
-                :value="s.key"
-                :disabled="!s.managed"
-            >
-                {{ s.name }}{{ s.managed ? '' : ' ' + $t('(not managed)') }}
-            </option>
-        </select>
+            :placeholder="$t('Choose…')"
+            :options="
+                services.map((s) => ({
+                    value: s.key,
+                    label: s.name,
+                    hint: s.managed ? undefined : $t('(not managed)'),
+                    disabled: !s.managed,
+                }))
+            "
+            @update:model-value="(v) => set('service', v)"
+        />
         <span :class="hint">{{
             $t(
                 'The adopted service that serves the app, like PHP-FPM. ServerOS only releases into folders it already looks after.',
@@ -390,25 +390,18 @@ const hint = 'text-[12px]/4 text-(--wf-faint)';
             </label>
             <label class="flex flex-col gap-1.5">
                 <span :class="label">{{ $t('Keep') }}</span>
-                <select
+                <SelectMenu
                     :class="field"
-                    :value="value('keep') || '3'"
+                    :model-value="value('keep') || '3'"
                     :disabled="readOnly"
-                    @change="
-                        set(
-                            'keep',
-                            Number(($event.target as HTMLSelectElement).value),
-                        )
+                    :options="
+                        [2, 3, 5, 10].map((n) => ({
+                            value: String(n),
+                            label: $t(':count releases', { count: String(n) }),
+                        }))
                     "
-                >
-                    <option
-                        v-for="n in [2, 3, 5, 10]"
-                        :key="n"
-                        :value="String(n)"
-                    >
-                        {{ $t(':count releases', { count: String(n) }) }}
-                    </option>
-                </select>
+                    @update:model-value="(v) => set('keep', Number(v))"
+                />
             </label>
         </div>
         <span :class="[hint, '-mt-2']">{{

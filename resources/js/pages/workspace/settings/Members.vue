@@ -14,6 +14,8 @@ import InputError from '@/components/InputError.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuGroup, SelectMenuOption } from '@/components/ui/select';
 import { getInitials } from '@/composables/useInitials';
 import {
     LICENSE_SETTINGS_PATH,
@@ -159,9 +161,46 @@ function canEdit(member: WorkspaceMember): boolean {
     return props.canManageMembers && member.role !== 'owner' && !member.isYou;
 }
 
-function changeRole(member: WorkspaceMember, event: Event): void {
-    const role = (event.target as HTMLSelectElement).value;
+function customRoleGroup(): SelectMenuGroup<string>[] {
+    return props.hasCustomRoles && props.customRoles.length
+        ? [
+              {
+                  label: trans('Your roles'),
+                  options: props.customRoles.map((role) => ({
+                      value: `custom:${role.id}`,
+                      label: role.name,
+                  })),
+              },
+          ]
+        : [];
+}
 
+const inviteRole = ref<string>(props.hasStaffRoles ? 'member' : 'admin');
+const inviteRoleOptions = computed(
+    (): (SelectMenuOption<string> | SelectMenuGroup<string>)[] => [
+        ...assignableRoles.value.map((role) => ({
+            value: role.value as string,
+            label: role.label + (isRoleAvailable(role) ? '' : ' (Pro)'),
+            disabled: !isRoleAvailable(role),
+        })),
+        ...customRoleGroup(),
+    ],
+);
+
+function memberRoleOptions(
+    member: WorkspaceMember,
+): (SelectMenuOption<string> | SelectMenuGroup<string>)[] {
+    return [
+        ...assignableRoles.value.map((role) => ({
+            value: role.value as string,
+            label: role.label,
+            disabled: !isRoleAvailable(role) && role.value !== member.role,
+        })),
+        ...customRoleGroup(),
+    ];
+}
+
+function changeRole(member: WorkspaceMember, role: string): void {
     router.patch(
         onWorkspace(
             memberRoutes.update({ workspace: slug.value, member: member.id }),
@@ -261,7 +300,7 @@ function formatDate(value: string | null): string {
 }
 
 const selectClass =
-    'ds-select h-8 cursor-pointer rounded-md border border-input bg-transparent pl-3 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed dark:bg-input/30';
+    'h-8 rounded-md border border-input bg-transparent pr-2.5 pl-3 text-[13px]/4 text-(--ds-text) shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed dark:bg-input/30';
 </script>
 
 <template>
@@ -308,37 +347,13 @@ const selectClass =
                             class="text-[13px]/5 font-medium text-(--ds-text-muted)"
                             >{{ $t('Role') }}</Label
                         >
-                        <select
+                        <SelectMenu
                             id="invite-role"
+                            v-model="inviteRole"
                             name="role"
+                            :options="inviteRoleOptions"
                             :class="[selectClass, 'h-9 min-w-32']"
-                        >
-                            <option
-                                v-for="role in assignableRoles"
-                                :key="role.value"
-                                :value="role.value"
-                                :disabled="!isRoleAvailable(role)"
-                                :selected="
-                                    role.value ===
-                                    (hasStaffRoles ? 'member' : 'admin')
-                                "
-                            >
-                                {{ role.label
-                                }}{{ isRoleAvailable(role) ? '' : ' (Pro)' }}
-                            </option>
-                            <optgroup
-                                v-if="hasCustomRoles && customRoles.length"
-                                :label="$t('Your roles')"
-                            >
-                                <option
-                                    v-for="role in customRoles"
-                                    :key="role.id"
-                                    :value="`custom:${role.id}`"
-                                >
-                                    {{ role.name }}
-                                </option>
-                            </optgroup>
-                        </select>
+                        />
                     </div>
                     <SubmitButton
                         :label="$t('Send invite')"
@@ -426,39 +441,18 @@ const selectClass =
                         {{ $t('Managed by SCIM') }}
                     </span>
 
-                    <select
+                    <SelectMenu
                         v-if="canEdit(member)"
+                        :model-value="
+                            roleValue(member.role, member.customRoleId)
+                        "
+                        :options="memberRoleOptions(member)"
                         :class="selectClass"
-                        :value="roleValue(member.role, member.customRoleId)"
                         :aria-label="
                             $t('Role for :name', { name: String(member.name) })
                         "
-                        @change="changeRole(member, $event)"
-                    >
-                        <option
-                            v-for="role in assignableRoles"
-                            :key="role.value"
-                            :value="role.value"
-                            :disabled="
-                                !isRoleAvailable(role) &&
-                                role.value !== member.role
-                            "
-                        >
-                            {{ role.label }}
-                        </option>
-                        <optgroup
-                            v-if="hasCustomRoles && customRoles.length"
-                            :label="$t('Your roles')"
-                        >
-                            <option
-                                v-for="role in customRoles"
-                                :key="role.id"
-                                :value="`custom:${role.id}`"
-                            >
-                                {{ role.name }}
-                            </option>
-                        </optgroup>
-                    </select>
+                        @change="(role) => changeRole(member, role)"
+                    />
                     <span
                         v-else
                         class="rounded-md bg-(--ds-hover) px-1.75 py-px text-xs/4.5 font-medium text-(--ds-text-secondary)"

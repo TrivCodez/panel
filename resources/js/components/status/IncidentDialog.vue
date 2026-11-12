@@ -10,6 +10,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
 
@@ -48,6 +50,13 @@ const states = computed(() => [
     { value: 'identified', label: trans('Identified') },
     { value: 'monitoring', label: trans('Monitoring') },
     { value: 'resolved', label: trans('Resolved') },
+]);
+const machineOptions = computed<SelectMenuOption<number | null>[]>(() => [
+    { value: null, label: trans('No machine') },
+    ...props.machines.map((machine) => ({
+        value: machine.id,
+        label: machine.name,
+    })),
 ]);
 const stateLabel = (state: string) =>
     states.value.find((s) => s.value === state)?.label ?? state;
@@ -281,28 +290,12 @@ function remove(): void {
                                 )
                             }}</span>
                         </span>
-                        <select
+                        <SelectMenu
                             id="incident-machine"
-                            :value="form.machine_id ?? ''"
-                            class="ds-select ds-raised-button h-8 max-w-44 cursor-pointer appearance-none pr-8! text-[13px]"
-                            @change="
-                                (e) => {
-                                    const id = Number(
-                                        (e.target as HTMLSelectElement).value,
-                                    );
-                                    form.machine_id = id || null;
-                                }
-                            "
-                        >
-                            <option value="">{{ $t('No machine') }}</option>
-                            <option
-                                v-for="machine in machines"
-                                :key="machine.id"
-                                :value="machine.id"
-                            >
-                                {{ machine.name }}
-                            </option>
-                        </select>
+                            v-model="form.machine_id"
+                            :options="machineOptions"
+                            class="ds-raised-button h-8 max-w-44 text-[13px]"
+                        />
                     </div>
                 </div>
                 <div v-else class="h-5" />

@@ -21,6 +21,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import DangerButton from '@/components/workspace/DangerButton.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
@@ -93,6 +94,13 @@ const privateStatusPage = computed(() => {
 
     return page && !page.public ? page : null;
 });
+
+const statusPageOptions = computed(() =>
+    props.statusPages.map((page) => ({
+        value: page.slug,
+        label: page.name + (page.live ? '' : ' ' + trans('(off)')),
+    })),
+);
 
 const pickedPrivate = computed(
     () => props.statusPages.find((p) => p.slug === form.page)?.public === false,
@@ -608,20 +616,12 @@ const th = 'px-3 py-2.5 text-left text-[12px]/4 font-medium';
                         <label for="domain-page" :class="labelClass">{{
                             $t('Which status page')
                         }}</label>
-                        <select
+                        <SelectMenu
                             id="domain-page"
                             v-model="form.page"
+                            :options="statusPageOptions"
                             class="h-9 w-full rounded-md border border-input bg-(--ds-field) px-2.5 text-[13px] outline-none focus:border-ring focus:ring-[3px] focus:ring-ring/50"
-                        >
-                            <option
-                                v-for="page in statusPages"
-                                :key="page.slug"
-                                :value="page.slug"
-                            >
-                                {{ page.name
-                                }}{{ page.live ? '' : ' ' + $t('(off)') }}
-                            </option>
-                        </select>
+                        />
                         <p
                             v-if="pickedPrivate"
                             class="text-xs/4 text-(--ds-amber)"

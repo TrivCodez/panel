@@ -2,6 +2,7 @@
 import { useSelfHosted } from '@/composables/useSelfHosted';
 import { useForm } from '@inertiajs/vue3';
 import { ChevronRight } from '@lucide/vue';
+import { trans } from 'laravel-vue-i18n';
 import { computed, ref, watch } from 'vue';
 import InputError from '@/components/InputError.vue';
 import { every, intervals } from '@/components/monitors/monitors';
@@ -13,6 +14,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import SubmitButton from '@/components/workspace/SubmitButton.vue';
 import ToggleSwitch from '@/components/workspace/ToggleSwitch.vue';
@@ -91,6 +94,20 @@ const expectExact = computed({
 function pickMachine(machine: MachineOption): void {
     form.machine_id = machine.id;
     if (form.type === 'tcp' && machine.ip && !form.host) form.host = machine.ip;
+}
+
+const machineOptions = computed<SelectMenuOption<number | null>[]>(() => [
+    { value: null, label: trans('No machine') },
+    ...props.machines.map((machine) => ({
+        value: machine.id,
+        label: machine.name,
+    })),
+]);
+
+function chooseMachine(id: number | null): void {
+    const machine = props.machines.find((m) => m.id === id);
+    if (machine) pickMachine(machine);
+    else form.machine_id = null;
 }
 
 function submit(): void {
@@ -367,24 +384,17 @@ const focusRing =
                             >
                                 {{ ' ' + $t('Time out after') + ' ' }}
                             </label>
-                            <select
+                            <SelectMenu
                                 id="monitor-timeout"
-                                v-model.number="form.timeout"
-                                class="ds-select ds-raised-button h-8 cursor-pointer appearance-none pr-8! text-[13px]"
-                            >
-                                <option :value="5">
-                                    {{ $t('5 seconds') }}
-                                </option>
-                                <option :value="10">
-                                    {{ $t('10 seconds') }}
-                                </option>
-                                <option :value="15">
-                                    {{ $t('15 seconds') }}
-                                </option>
-                                <option :value="30">
-                                    {{ $t('30 seconds') }}
-                                </option>
-                            </select>
+                                v-model="form.timeout"
+                                :options="[
+                                    { value: 5, label: $t('5 seconds') },
+                                    { value: 10, label: $t('10 seconds') },
+                                    { value: 15, label: $t('15 seconds') },
+                                    { value: 30, label: $t('30 seconds') },
+                                ]"
+                                class="ds-raised-button h-8 text-[13px]"
+                            />
                         </div>
 
                         <div
@@ -408,33 +418,13 @@ const focusRing =
                                     }}
                                 </span>
                             </span>
-                            <select
+                            <SelectMenu
                                 id="monitor-machine"
-                                :value="form.machine_id ?? ''"
-                                class="ds-select ds-raised-button h-8 max-w-44 cursor-pointer appearance-none pr-8! text-[13px]"
-                                @change="
-                                    (e) => {
-                                        const id = Number(
-                                            (e.target as HTMLSelectElement)
-                                                .value,
-                                        );
-                                        const machine = machines.find(
-                                            (m) => m.id === id,
-                                        );
-                                        if (machine) pickMachine(machine);
-                                        else form.machine_id = null;
-                                    }
-                                "
-                            >
-                                <option value="">{{ $t('No machine') }}</option>
-                                <option
-                                    v-for="machine in machines"
-                                    :key="machine.id"
-                                    :value="machine.id"
-                                >
-                                    {{ machine.name }}
-                                </option>
-                            </select>
+                                :model-value="form.machine_id"
+                                :options="machineOptions"
+                                class="ds-raised-button h-8 max-w-44 text-[13px]"
+                                @update:model-value="chooseMachine"
+                            />
                         </div>
 
                         <div

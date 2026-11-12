@@ -25,6 +25,8 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { SelectMenu } from '@/components/ui/select';
+import type { SelectMenuOption } from '@/components/ui/select';
 import AppButton from '@/components/workspace/AppButton.vue';
 import DangerButton from '@/components/workspace/DangerButton.vue';
 import SettingsLine from '@/components/workspace/SettingsLine.vue';
@@ -162,6 +164,13 @@ const inheritLabel = computed(() =>
         ? trans('Follow its group, :group', { group: props.policy.group.name })
         : trans('Follow the default, :name', { name: defaultName.value }),
 );
+const policyOptions = computed<SelectMenuOption<number | null>[]>(() => [
+    { value: null, label: inheritLabel.value },
+    ...props.policy.options.map((option) => ({
+        value: option.id,
+        label: option.name,
+    })),
+]);
 const policyFollows = computed(() => {
     const name = props.policy.current.name;
     if (props.policy.from === 'machine') {
@@ -184,10 +193,10 @@ const policyFollows = computed(() => {
     return trans('Follows :name, the default policy.', { name });
 });
 
-function choosePolicy(value: string): void {
+function choosePolicy(value: number | null): void {
     router.put(
         `${machineUrl.value}/policy`,
-        { policy: value === '' ? null : Number(value) },
+        { policy: value },
         {
             preserveScroll: true,
             onStart: () => {
@@ -911,27 +920,15 @@ const serviceColumns =
                         </p>
                         <InputError :message="policyError ?? undefined" />
                     </div>
-                    <select
+                    <SelectMenu
                         v-if="canManage"
-                        :value="policy.choice ?? ''"
-                        class="ds-select ds-raised-button h-9 w-full cursor-pointer appearance-none pr-8! text-[13px] sm:w-60"
+                        :model-value="policy.choice"
+                        :options="policyOptions"
+                        class="ds-raised-button h-9 w-full text-[13px] sm:w-60"
                         :aria-label="$t('Policy')"
                         :disabled="policyBusy"
-                        @change="
-                            choosePolicy(
-                                ($event.target as HTMLSelectElement).value,
-                            )
-                        "
-                    >
-                        <option value="">{{ inheritLabel }}</option>
-                        <option
-                            v-for="option in policy.options"
-                            :key="option.id"
-                            :value="option.id"
-                        >
-                            {{ option.name }}
-                        </option>
-                    </select>
+                        @update:model-value="choosePolicy"
+                    />
                 </div>
                 <div
                     class="grid gap-5 border-t border-(--ds-divider) px-5 py-4 md:grid-cols-2"

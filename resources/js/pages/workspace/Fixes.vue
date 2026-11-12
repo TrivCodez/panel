@@ -18,6 +18,7 @@ import {
     DialogDescription,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { SelectMenu } from '@/components/ui/select';
 import WorkspacePage from '@/components/workspace/WorkspacePage.vue';
 import { appButtonClasses } from '@/lib/appButton';
 import { renderMarkdown } from '@/lib/markdown';
@@ -299,6 +300,18 @@ const limitError = computed(
 const chosenMachine = computed(() =>
     props.machines.find((m) => String(m.id) === String(form.machine)),
 );
+const machineOptions = computed(() =>
+    props.machines.map((m) => ({ value: m.id, label: m.name })),
+);
+const serviceOptions = computed(() => [
+    { value: '', label: trans('The whole machine') },
+    ...(chosenMachine.value?.services ?? []).map((s) => ({
+        value: s.key,
+        label:
+            s.name +
+            (s.status && s.status !== 'running' ? ` (${s.status})` : ''),
+    })),
+]);
 function startAsking(): void {
     form.reset();
     form.clearErrors();
@@ -965,23 +978,14 @@ const field =
                         class="flex flex-col gap-1.5 text-[12px]/5 font-medium text-(--ds-text-muted)"
                     >
                         {{ $t('Machine') }}
-                        <select
+                        <SelectMenu
                             v-model="form.machine"
-                            :class="[field, 'ds-select cursor-pointer']"
+                            :class="field"
+                            :options="machineOptions"
+                            :placeholder="$t('Choose a machine…')"
                             required
                             @change="form.service = ''"
-                        >
-                            <option value="" disabled>
-                                {{ $t('Choose a machine…') }}
-                            </option>
-                            <option
-                                v-for="m in machines"
-                                :key="m.id"
-                                :value="m.id"
-                            >
-                                {{ m.name }}
-                            </option>
-                        </select>
+                        />
                         <span
                             v-if="form.errors.machine"
                             class="text-(--ds-red)"
@@ -992,27 +996,12 @@ const field =
                         class="flex flex-col gap-1.5 text-[12px]/5 font-medium text-(--ds-text-muted)"
                     >
                         {{ $t('Service (optional)') }}
-                        <select
+                        <SelectMenu
                             v-model="form.service"
-                            :class="[field, 'ds-select cursor-pointer']"
+                            :class="field"
+                            :options="serviceOptions"
                             :disabled="!chosenMachine"
-                        >
-                            <option value="">
-                                {{ $t('The whole machine') }}
-                            </option>
-                            <option
-                                v-for="s in chosenMachine?.services ?? []"
-                                :key="s.key"
-                                :value="s.key"
-                            >
-                                {{ s.name
-                                }}{{
-                                    s.status && s.status !== 'running'
-                                        ? ` (${s.status})`
-                                        : ''
-                                }}
-                            </option>
-                        </select>
+                        />
                         <span
                             v-if="form.errors.service"
                             class="text-(--ds-red)"
